@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scraper</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 8px rgba(102, 126, 234, 0.5);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        .loader {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .loader div {
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 0.6s infinite alternate;
+        }
+
+        .loader div:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loader div:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            to {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        @media(max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>🚀 Smart Web Scraper</h2>
+
+        <input type="text" id="url" placeholder="Enter URL (optional)">
+        <input type="text" id="keyword" placeholder="Enter Keyword (optional)">
+
+        <button onclick="scrape()">Scrape Data</button>
+
+        <div class="loader" id="loader">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+
+        <div class="msg" id="message"></div>
+    </div>
+
+    <script>
+        function scrape() {
+            const url = document.getElementById("url").value;
+            const keyword = document.getElementById("keyword").value;
+            const loader = document.getElementById("loader");
+            const message = document.getElementById("message");
+
+            message.innerHTML = "";
+            loader.style.display = "block";
+
+            fetch("/scrape", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ url, keyword })
+            })
+                .then(res => {
+                    if (res.ok) return res.blob();
+                    else return res.json();
+                })
+                .then(data => {
+                    loader.style.display = "none";
+
+                    if (data instanceof Blob) {
+                        const link = document.createElement("a");
+                        link.href = window.URL.createObjectURL(data);
+                        link.download = "output.xlsx";
+                        link.click();
+
+                        message.innerHTML = "✅ Data downloaded successfully!";
+                        message.className = "msg success";
+                    } else {
+                        message.innerHTML = "❌ " + data.error;
+                        message.className = "msg error";
+                    }
+                })
+                .catch(err => {
+                    loader.style.display = "none";
+                    message.innerHTML = "❌ Something went wrong!";
+                    message.className = "msg error";
+                });
+        }
+    </script>
+
+</body>
+
+</html>
