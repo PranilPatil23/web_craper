@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_file, render_template
-from scraper import detect_input, fix_url, scrape_static, enhanced_scrape, ai_summary, deep_research
+from scraper import detect_input, fix_url, scrape_static, enhanced_scrape
 from utils import save_to_excel, save_to_json, save_to_word
-from requests_html import HTMLSession
 import os
 import uuid
 
@@ -35,26 +34,21 @@ def scrape():
         input_type = detect_input(query)
 
         if input_type == "url":
-            result = scrape_static(query)
+            url = fix_url(query)
+            result = scrape_static(url)
         else:
-            engine = data.get("engine", "duckduckgo")
-
-            if engine == "deep":
-                result = deep_research(query)
-            else:   
-                result = enhanced_scrape(query, engine) 
+            # 🔥 ONLY SerpAPI
+            result = enhanced_scrape(query)
 
         if isinstance(result, dict) and "error" in result:
             return jsonify(result), 500
-       
-        # 🔥 Description from SerpAPI results
-        description = ""
 
-        for item in result:
-            if item.get("content"):
-                description += item["content"] + " "
+        # 🔥 Description (replace AI summary)
+        descriptions = [
+            item.get("content", "") for item in result if item.get("content")
+        ]
 
-        description = description[:500]  # limit length
+        description = " ".join(descriptions[:3])  # top 3 results
 
         return jsonify({
             "summary": description,
@@ -63,6 +57,7 @@ def scrape():
 
     except Exception as e:
         return jsonify({"error": f"Scrape Error: {str(e)}"}), 500
+
 
 # ---------- DOWNLOAD ----------
 @app.route("/download", methods=["POST"])
@@ -80,7 +75,6 @@ def download():
         return jsonify({"error": "No results to download"}), 400
 
     try:
-        # Unique filename (important for multiple users)
         file_id = str(uuid.uuid4())
 
         if format_type == "excel":
@@ -103,24 +97,7 @@ def download():
     except Exception as e:
         return jsonify({"error": f"Download Error: {str(e)}"}), 500
 
-def scrape_dynamic(url):
-    session = HTMLSession()
-    r = session.get(url)
-    r.html.render(timeout=20)
 
-    paragraphs = r.html.find("p")
-    content = " ".join([p.text for p in paragraphs[:10]])
-
-    return [{
-        "title": "Dynamic Page",
-        "content": content,
-        "link": url
-    }]
-    result = scrape_static(url)
-
-    if not result or "Content not available" in result[0]["content"]:
-        result = scrape_dynamic(url)                    
-        
 # ---------- RUN ----------
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run()
