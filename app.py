@@ -37,18 +37,21 @@ def scrape():
             url = fix_url(query)
             result = scrape_static(url)
         else:
-            # 🔥 ONLY SerpAPI
+            # 🔥 Multi-engine search
             result = enhanced_scrape(query)
 
         if isinstance(result, dict) and "error" in result:
             return jsonify(result), 500
 
-        # 🔥 Description (replace AI summary)
-        descriptions = [
+        # 🔥 Clean Description
+        descriptions = list(set([
             item.get("content", "") for item in result if item.get("content")
-        ]
+        ]))
 
-        description = " ".join(descriptions[:3])  # top 3 results
+        description = " ".join(descriptions[:3])[:500]
+
+        if not description:
+            description = "No description available."
 
         return jsonify({
             "summary": description,
