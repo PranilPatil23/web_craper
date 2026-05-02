@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
-import google.generativeai as genai
 import re
 from serpapi import GoogleSearch
 from tavily import TavilyClient
@@ -12,10 +11,6 @@ load_dotenv()
 
 SERP_API_KEY = os.getenv("SERP_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -213,36 +208,9 @@ def enhanced_scrape(query, engine="all"):
     return list(unique.values())
 
 # ---------- AI SUMMARY ----------
-def ai_summary(data_list, query):
-    combined = ""
 
-    for item in data_list:
-        combined += item.get("content", "") + "\n"
 
-    if not combined.strip():
-        return f"No detailed data found for '{query}', but here are relevant sources."
 
-    prompt = f"""
-    User Query: {query}
-
-    You are an expert assistant.
-
-    Based on the following data collected from multiple websites:
-    {combined}
-
-    Do the following:
-    - Give a clear explanation
-    - Combine all sources
-    - Remove duplicate ideas
-    - Make it easy to understand
-    - Answer like ChatGPT
-    """
-
-    try:
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"AI Error: {str(e)}"
 
 # SERP API Google Search
 def serp_search(query):
