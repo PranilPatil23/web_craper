@@ -378,6 +378,7 @@
     </div>
 
     <script>
+        let currentType = "normal";
         let currentData = [];
         let currentSummary = "";
 
@@ -423,7 +424,9 @@
                 currentData = data.results || [];
                 currentSummary = data.summary || "";
 
-                displayResults();
+                // 🔥 IMPORTANT
+                displayResults(data.type || "normal");
+
 
             } catch (err) {
                 loader.style.display = "none";
@@ -432,40 +435,53 @@
             }
         }
 
-        function displayResults() {
+        function displayResults(type = "normal") {
             const resultsSection = document.getElementById("results-section");
             const summaryContent = document.getElementById("summary-content");
             const dataList = document.getElementById("data-list");
 
-            // 🔥 Summary fix
             summaryContent.textContent = currentSummary || "No summary available.";
 
             if (!currentData.length) {
-                dataList.innerHTML = `
-                <div class="result-item">
-                    ❌ No readable sources found. Try another query.
-                </div>
-            `;
+                dataList.innerHTML = `<div class="result-item">❌ No data found</div>`;
                 resultsSection.style.display = "block";
                 return;
             }
 
-            // 🔥 Proper mapping
-            const html = currentData.map(item => {
-                const title = item.title || item.tag || "No Title";
-                const content = item.content || item.text || "";
-                const link = item.link || "";
+            // 🔥 CATEGORY VIEW
+            if (type === "category") {
+                const html = currentData.map(item => `
+            <div class="result-item" onclick="loadCategoryCards('${item.link}')">
+                📂 ${item.title}
+            </div>
+        `).join("");
 
-                return `
-                <div class="result-item">
-                    <div class="result-title">📄 ${title}</div>
-                    ${link ? `<a href="${link}" target="_blank" class="result-link">${link}</a>` : ""}
-                    <div class="result-preview">
-                        ${content.length > 300 ? content.substring(0, 300) + '...' : content}
-                    </div>
-                </div>
-            `;
-            }).join("");
+                dataList.innerHTML = html;
+                resultsSection.style.display = "block";
+                return;
+            }
+
+            // 🔥 CARDS VIEW
+            if (type === "cards") {
+                const html = currentData.map(item => `
+            <div class="result-item" onclick="loadCardDetails('${item.link}')">
+                💳 ${item.title}
+            </div>
+        `).join("");
+
+                dataList.innerHTML = html;
+                resultsSection.style.display = "block";
+                return;
+            }
+
+            // 🔥 NORMAL VIEW
+            const html = currentData.map(item => `
+        <div class="result-item">
+            <div class="result-title">${item.title}</div>
+            ${item.link ? `<a href="${item.link}" target="_blank">${item.link}</a>` : ""}
+            <div>${item.content}</div>
+        </div>
+    `).join("");
 
             dataList.innerHTML = html;
             resultsSection.style.display = "block";
@@ -505,6 +521,81 @@
             } catch (err) {
                 alert("Download error: " + err.message);
             }
+        }
+
+        async function loadCategory(url) {
+            try {
+                const res = await fetch("/category-cards", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                currentData = data.results;
+                currentType = "cards";
+
+                displayResults("cards");
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+
+        async function getCardDetails(url) {
+            try {
+                const res = await fetch("/card-details", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                alert(
+                    "📄 Description:\n\n" + data.description +
+                    "\n\n🔗 Visit Page:\n" + data.link
+                );
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+
+        // ---------- LOAD CATEGORY CARDS ----------
+        async function loadCategoryCards(url) {
+            const response = await fetch("/category-cards", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url })
+            });
+
+            const data = await response.json();
+
+            currentData = data.results;
+            currentSummary = "Select a card to view details";
+
+            displayResults("cards");
+        }
+
+        // ---------- LOAD CARD DETAILS ----------
+        async function loadCardDetails(url) {
+            const response = await fetch("/card-details", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url })
+            });
+
+            const data = await response.json();
+
+            alert(data.description + "\n\n🔗 " + data.link);
         }
     </script>
 </body>
