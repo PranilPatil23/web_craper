@@ -3190,8 +3190,4 @@ def scrape_specific_loan_details(loan_name):
         "cashback_or_rewards": f"Benefit from competitive rates and fast disbursal on your HDFC {loan_name}.",
         "benefits": ["Quick Approval", "Flexible EMI", "Low Rates", "Minimal Docs"],
         "apply_url": "https://www.hdfcbank.com/personal/borrow"
-<<<<<<< HEAD
     }
-=======
-    }
->>>>>>> d37d666bd9c78f1aab6bf5f20223028cd8bbb1ee
