@@ -1,3 +1,6 @@
+import os
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
@@ -5,7 +8,6 @@ import google.generativeai as genai
 import re
 from serpapi import GoogleSearch
 from tavily import TavilyClient
-import os
 from dotenv import load_dotenv
 
 load_dotenv()

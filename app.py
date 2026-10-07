@@ -1,3 +1,6 @@
+import os
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 from flask import Flask, request, jsonify, send_file, render_template
 from scraper import (
     detect_input, fix_url, scrape_static, enhanced_scrape, ai_summary,
