@@ -1,0 +1,7 @@
+__pycache__/
+.env
+downloads/
+output.xlsx
+data.docx
+data.xlsx
+*.pyc

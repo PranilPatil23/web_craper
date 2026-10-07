@@ -23,10 +23,41 @@ DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 
+# ---------- ERROR HANDLERS FOR VERCEL ----------
+@app.errorhandler(500)
+def handle_500_error(error):
+    """Catches unhandled exceptions and returns proper JSON response"""
+    return jsonify({
+        "error": "Internal server error. Please try again.",
+        "details": str(error)[:200]
+    }), 500
+
+
+@app.errorhandler(Exception)
+def handle_all_errors(error):
+    """Catches any uncaught exception to prevent function invocation failure"""
+    import traceback
+    return jsonify({
+        "error": "An unexpected error occurred",
+        "details": str(error)[:200]
+    }), 500
+
+
 # ---------- HOME ----------
 @app.route("/")
 def home():
     return render_template("index.html")
+
+
+# ---------- HEALTH CHECK ----------
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Vercel health check endpoint"""
+    return jsonify({
+        "status": "ok",
+        "service": "Web Scraper API",
+        "version": "1.0.0"
+    }), 200
 
 
 # ---------- SCRAPE ----------

@@ -62,4 +62,3 @@ def save_to_word(data, summary="", filename="scraped_data.docx"):
 
     doc.save(filename)
     return filename
-    

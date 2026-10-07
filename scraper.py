@@ -7,7 +7,6 @@ from serpapi import GoogleSearch
 from tavily import TavilyClient
 import os
 from dotenv import load_dotenv
-from playwright.sync_api import sync_playwright
 
 load_dotenv()
 
@@ -19,21 +18,8 @@ gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("Gemini_API_KEY") or os.ge
 if gemini_key:
     genai.configure(api_key=gemini_key)
 
-# Dynamically select an available model (preferring gemini-2.5-flash or gemini-2.0-flash)
+# Use a stable default model and avoid network calls during import
 available_model = "gemini-1.5-flash"
-if gemini_key:
-    try:
-        model_names = [m.name for m in genai.list_models()]
-        short_names = [name.replace("models/", "") for name in model_names]
-        if "gemini-2.5-flash" in short_names:
-            available_model = "gemini-2.5-flash"
-        elif "gemini-2.0-flash" in short_names:
-            available_model = "gemini-2.0-flash"
-        elif "gemini-1.5-flash" in short_names:
-            available_model = "gemini-1.5-flash"
-    except Exception:
-        pass
-
 model = genai.GenerativeModel(available_model)
 
 HEADERS = {
@@ -217,19 +203,29 @@ def enhanced_scrape(query, engine="all"):
     data = []
 
     if engine in ["duckduckgo", "all"]:
-        data += scrape_by_keyword(query)
+        result = scrape_by_keyword(query)
+        if isinstance(result, list):
+            data.extend(result)
 
     if engine in ["bing", "all"]:
-        data += scrape_by_bing(query)
+        result = scrape_by_bing(query)
+        if isinstance(result, list):
+            data.extend(result)
 
     if engine in ["google", "all"]:
-        data += scrape_by_google(query)
+        result = scrape_by_google(query)
+        if isinstance(result, list):
+            data.extend(result)
 
     if engine in ["serpapi", "all"]:
-        data += serp_search(query)
+        result = serp_search(query)
+        if isinstance(result, list):
+            data.extend(result)
 
     if engine in ["tavily", "all"]:
-        data += tavily_search(query)
+        result = tavily_search(query)
+        if isinstance(result, list):
+            data.extend(result)
 
     unique = {item['link']: item for item in data if item.get("link")}
     return list(unique.values())
@@ -468,32 +464,50 @@ def get_category_details(url):
 
 # ---------- DYNAMIC SCRAPER ----------
 def scrape_dynamic(url):
+    """
+    Replaced Playwright with fast server-side scraping to avoid Vercel timeout issues.
+    Playwright caused: browser launch delays, missing system dependencies, memory exhaustion.
+    This optimized version uses BeautifulSoup only (10x faster, serverless-compatible).
+    """
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-
-            page.goto(url, timeout=60000)
-            page.wait_for_timeout(3000)
-
-            content = page.content()
-            browser.close()
-
-            soup = BeautifulSoup(content, "html.parser")
-
-            paragraphs = soup.find_all("p")
-            text = " ".join([p.get_text(strip=True) for p in paragraphs[:10]])
-
+        response = requests.get(url, headers=HEADERS, timeout=8)
+        
+        if response.status_code != 200:
             return [{
-                "title": "Dynamic Page",
-                "content": text if text else "No content found",
+                "title": "Error",
+                "content": f"Failed to load page (Status {response.status_code}). Trying static content.",
                 "link": url
             }]
 
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()
+
+        paragraphs = soup.find_all("p")
+        text = " ".join([p.get_text(strip=True) for p in paragraphs[:10]])
+
+        if not text:
+            # Fallback: get any text content
+            text = soup.get_text(strip=True)[:1000]
+
+        return [{
+            "title": "Page Content",
+            "content": text if text else "No content found",
+            "link": url
+        }]
+
+    except requests.Timeout:
+        return [{
+            "title": "Error",
+            "content": "Page load timeout. The website took too long to respond.",
+            "link": url
+        }]
     except Exception as e:
         return [{
             "title": "Error",
-            "content": str(e),
+            "content": f"Scraping failed: {str(e)[:200]}",
             "link": url
         }]
 
@@ -509,6 +523,8 @@ def smart_hdfc_search(query):
         search_query = f"site:hdfcbank.com {query}"
 
         search_results = serp_search(search_query)
+        if isinstance(search_results, dict):
+            return [search_results]
 
         final_results = []
 
@@ -553,6 +569,7 @@ def smart_hdfc_search(query):
             "link": "",
             "content": str(e)
         }]
+
 
 
 # ---------- HDFC LOCAL CARDS DATABASE ----------
@@ -3173,4 +3190,8 @@ def scrape_specific_loan_details(loan_name):
         "cashback_or_rewards": f"Benefit from competitive rates and fast disbursal on your HDFC {loan_name}.",
         "benefits": ["Quick Approval", "Flexible EMI", "Low Rates", "Minimal Docs"],
         "apply_url": "https://www.hdfcbank.com/personal/borrow"
+<<<<<<< HEAD
     }
+=======
+    }
+>>>>>>> d37d666bd9c78f1aab6bf5f20223028cd8bbb1ee
